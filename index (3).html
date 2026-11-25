@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malappuram Work Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a register-style worklist. Summary tiles double as filters, category tabs sit above one ruled list, and a side sheet holds the task form and its activity log. */
+:root {
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --surface-2: #E9EDF3;
+  --ink: #14213D;
+  --ink-2: #4A5876;
+  --line: #D3DAE5;
+  --accent: #0E5E6F;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #D7EBEF;
+  --bad: #B3261E;
+  --bad-soft: #FBE3E0;
+  --warn: #85560A;
+  --warn-soft: #FAEDCB;
+  --ok: #1D6A39;
+  --ok-soft: #DCEFE2;
+  --info: #2C4A9A;
+  --info-soft: #E0E6F7;
+  --shadow: 0 12px 40px rgba(20, 33, 61, .22);
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1623; --surface: #172033; --surface-2: #1E2A40; --ink: #E7ECF5; --ink-2: #A3B0C8; --line: #2C3A55;
+    --accent: #5CC1D4; --accent-ink: #08222A; --accent-soft: #163845;
+    --bad: #FF8F85; --bad-soft: #3B1C1C; --warn: #F2C35B; --warn-soft: #3A2D12;
+    --ok: #74D294; --ok-soft: #15321F; --info: #93AAFF; --info-soft: #1B2548;
+    --shadow: 0 12px 40px rgba(0, 0, 0, .55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1623; --surface: #172033; --surface-2: #1E2A40; --ink: #E7ECF5; --ink-2: #A3B0C8; --line: #2C3A55;
+  --accent: #5CC1D4; --accent-ink: #08222A; --accent-soft: #163845;
+  --bad: #FF8F85; --bad-soft: #3B1C1C; --warn: #F2C35B; --warn-soft: #3A2D12;
+  --ok: #74D294; --ok-soft: #15321F; --info: #93AAFF; --info-soft: #1B2548;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .55);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.app { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 22px 56px; display: flex; flex-direction: column; gap: 18px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; }
+.eyebrow { margin: 0 0 4px; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+h1 { margin: 0; font-size: 28px; line-height: 1.1; letter-spacing: -.01em; font-weight: 700; text-wrap: balance; }
+.who { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.who label { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.who input { width: 11rem; }
+
+/* controls */
+input, select, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; min-width: 0; width: 100%; }
+textarea { resize: vertical; min-height: 4.5rem; }
+input::placeholder, textarea::placeholder { color: var(--ink-2); opacity: .75; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 7px 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.small { padding: 5px 10px; font-size: 12.5px; }
+.btn.danger { color: var(--bad); }
+.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.link { border-color: transparent; background: transparent; color: var(--accent); padding-inline: 6px; }
+.btn.link:hover { text-decoration: underline; border-color: transparent; }
+
+.banner { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-weight: 500; }
+
+/* summary tiles */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.6rem, 1fr)); gap: 10px; }
+.tile { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.tile:hover { border-color: var(--ink-2); }
+.tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile .n { font-family: var(--font-mono); font-size: 26px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .l { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.tile.bad .n { color: var(--bad); }
+.tile.warn .n { color: var(--warn); }
+.tile.ok .n { color: var(--ok); }
+
+/* tabs */
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.tab { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
+.tab:hover { border-color: var(--ink-2); }
+.tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.tab .c { font-family: var(--font-mono); font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+
+.filters { display: grid; grid-template-columns: minmax(0, 1fr) 13rem; gap: 10px; }
+
+/* list */
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.head, .row { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 11rem 9.5rem; gap: 6px 18px; padding: 12px 16px; }
+.head { background: var(--surface-2); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--ink-2); padding-block: 8px; }
+.row { border-top: 1px solid var(--line); align-items: start; }
+.head + .row { border-top: 0; }
+.due { grid-area: due; display: flex; flex-direction: column; gap: 2px; }
+.due .d { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.due .r { font-size: 12.5px; font-weight: 600; }
+.r.bad { color: var(--bad); } .r.warn { color: var(--warn); } .r.ok { color: var(--ok); } .r.neutral { color: var(--ink-2); }
+.main { grid-area: main; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.client { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.type { color: var(--ink-2); overflow-wrap: anywhere; }
+.refs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.note { color: var(--ink-2); font-size: 12.5px; overflow-wrap: anywhere; }
+.people { grid-area: people; display: flex; flex-direction: column; gap: 3px; font-size: 13px; min-width: 0; }
+.people div { display: flex; gap: 8px; min-width: 0; }
+.people .k { color: var(--ink-2); width: 4.2rem; flex: none; font-size: 12px; }
+.people .v { overflow-wrap: anywhere; min-width: 0; }
+.people .none { color: var(--ink-2); font-style: italic; }
+.state { grid-area: status; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pill.neutral { background: var(--surface-2); color: var(--ink-2); }
+.pill.info { background: var(--info-soft); color: var(--info); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.accent { background: var(--accent-soft); color: var(--accent); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.sample { background: transparent; border: 1px dashed var(--ink-2); color: var(--ink-2); font-weight: 600; margin-left: 6px; vertical-align: 2px; font-size: 11px; }
+.empty { padding: 36px 20px; text-align: center; color: var(--ink-2); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.empty strong { color: var(--ink); font-size: 16px; }
+.empty p { margin: 0; max-width: 46ch; }
+.empty .acts { justify-content: center; }
+.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--ink-2); font-size: 12.5px; }
+
+@media (max-width: 820px) {
+  .head { display: none; }
+  .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main main" "due status" "people people"; }
+  .state { align-items: flex-end; }
+  .acts { justify-content: flex-end; }
+  .filters { grid-template-columns: minmax(0, 1fr); }
+  h1 { font-size: 24px; }
+}
+
+/* side sheet */
+.overlay { position: fixed; inset: 0; background: rgba(10, 16, 30, .5); z-index: 20; display: flex; justify-content: flex-end; }
+.sheet { background: var(--bg); width: min(560px, 100%); height: 100%; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+.sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 20px 12px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid var(--line); background: var(--surface); }
+.sheet-head h2 { margin: 0 0 6px; font-size: 19px; }
+.sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 18px; }
+.sheet-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 20px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--surface); }
+.sheet-foot .right { display: flex; gap: 8px; margin-left: auto; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+legend { padding: 0; margin-bottom: 8px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.grid2 .full { grid-column: 1 / -1; }
+.fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fld label { font-size: 12.5px; font-weight: 600; }
+.fld label .req { color: var(--accent); font-weight: 600; }
+.fld .hint { font-size: 12px; color: var(--ink-2); }
+.fld input.mono { font-family: var(--font-mono); }
+.msg { margin: 0; padding: 9px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.flow { display: flex; gap: 6px; flex-wrap: wrap; }
+.log { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.log li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 10px; font-size: 13px; }
+.log time { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.log .by { font-weight: 600; }
+@media (max-width: 560px) {
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .log li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 40; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; max-width: min(92vw, 520px); box-shadow: var(--shadow); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+body { min-height: 100vh; }
+#work { display: flex; flex-direction: column; gap: 18px; }
+.acct { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.connect { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.connect h2 { margin: 0; font-size: 20px; }
+.connect p { margin: 0; color: var(--ink-2); max-width: 62ch; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; background: var(--bg); }
+.card h3 { margin: 0; font-size: 15px; }
+.card p { font-size: 13px; }
+.linkbox { background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.linkbox p { margin: 0; }
+.linkrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.linkrow input { flex: 1; min-width: 12rem; font-family: var(--font-mono); font-size: 12.5px; }
+code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <p class="eyebrow">DSG &amp; Associates CS LLP</p>
+      <h1>Malappuram Work Tracker</h1>
+    </div>
+    <div class="who">
+      <label for="me">Working as</label>
+      <input id="me" type="text" placeholder="Your name" autocomplete="off" list="dl-people">
+      <button class="btn primary" id="add" type="button" hidden>Add task</button>
+      <span class="acct" id="acct"></span>
+      <button class="btn small" id="team" type="button" hidden>Team link</button>
+      <button class="btn small" id="signout" type="button" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <div class="linkbox" id="linkbox" hidden>
+    <p><strong>Team link.</strong> Anyone who has this link can open and change the tracker, so share it only with your staff. Each person pastes it once when they first open the tracker.</p>
+    <div class="linkrow"><label class="sr" for="linkval">Team link</label><input id="linkval" type="text" readonly><button class="btn" id="linkcopy" type="button">Copy</button><button class="btn" id="linkclose" type="button">Close</button></div>
+  </div>
+  <section class="connect" id="connect"><p>Starting</p></section>
+  <div id="work" hidden>
+  <div class="banner" id="banner" hidden></div>
+  <section class="stats" id="stats" aria-label="Summary"></section>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Work category"></div>
+  <div class="filters">
+    <div><label class="sr" for="q">Search</label><input id="q" type="search" placeholder="Search client, task, SRN or UDIN" autocomplete="off"></div>
+    <div><label class="sr" for="who">Person</label><select id="who"></select></div>
+  </div>
+  <section class="list" id="list" aria-live="polite"></section>
+  <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<datalist id="dl-people"></datalist>
+<datalist id="dl-clients"></datalist>
+
+<div class="overlay" id="overlay" hidden>
+  <form class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-title">New task</h2>
+        <div id="sheet-status"></div>
+      </div>
+      <button type="button" class="btn small" id="sheet-close">Close</button>
+    </div>
+    <div class="sheet-body">
+      <p class="msg" id="sheet-msg" role="alert" hidden></p>
+      <div class="flow" id="sheet-flow"></div>
+      <fieldset>
+        <legend>Task</legend>
+        <div class="grid2">
+          <div class="fld full"><label for="f-client">Client</label><input id="f-client" type="text" list="dl-clients" autocomplete="off" placeholder="Company or LLP name"></div>
+          <div class="fld"><label for="f-cat">Category</label><select id="f-cat"></select></div>
+          <div class="fld"><label for="f-type">Task</label><select id="f-type"></select></div>
+          <div class="fld"><label for="f-due">Due date</label><input id="f-due" type="date"></div>
+          <div class="fld"><label>&nbsp;</label><span class="hint" id="f-hint"></span></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Maker and checker</legend>
+        <div class="grid2">
+          <div class="fld"><label for="f-maker">Maker (drafts and files)</label><input id="f-maker" type="text" list="dl-people" autocomplete="off" placeholder="Name"></div>
+          <div class="fld"><label for="f-checker">Checker (reviews and signs off)</label><input id="f-checker" type="text" list="dl-people" autocomplete="off" placeholder="Name"></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Filing references</legend>
+        <div class="grid2">
+          <div class="fld"><label for="f-srn" id="lab-srn">SRN</label><input id="f-srn" class="mono" type="text" autocomplete="off"></div>
+          <div class="fld"><label for="f-udin" id="lab-udin">UDIN</label><input id="f-udin" class="mono" type="text" autocomplete="off"></div>
+          <div class="fld"><label for="f-ack" id="lab-ack">Challan / acknowledgement no.</label><input id="f-ack" class="mono" type="text" autocomplete="off"></div>
+          <div class="fld"><label for="f-filed">Filed on</label><input id="f-filed" type="date"></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Notes</legend>
+        <div class="fld"><label class="sr" for="f-notes">Notes</label><textarea id="f-notes" placeholder="Documents awaited, client instructions, query raised"></textarea></div>
+      </fieldset>
+      <fieldset id="log-box">
+        <legend>Activity</legend>
+        <ol class="log" id="f-log"></ol>
+      </fieldset>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn danger" id="f-delete">Delete task</button>
+      <div class="right">
+        <button type="button" class="btn" id="f-cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="f-save">Save task</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+/* SETUP: cb68c079-283d-463b-966d-334cb97c8af0. */
+window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- reference data ---------- */
+  var CATS = [
+    { id: "annual", label: "Annual & Routine", full: "Annual & Routine Compliances", types: [
+      { n: "AOC-4 (Financial Statements)", ref: "srn", hint: "Within 30 days of the AGM" },
+      { n: "MGT-7 / MGT-7A (Annual Return)", ref: "srn", hint: "Within 60 days of the AGM" },
+      { n: "DIR-3 KYC (Director KYC)", ref: "srn", hint: "30 September every year" },
+      { n: "DPT-3 (Return of Deposits)", ref: "srn", hint: "30 June every year" },
+      { n: "MSME-1 (Half-yearly return)", ref: "srn", hint: "30 April for Oct-Mar and 31 October for Apr-Sep" },
+      { n: "FLA Return (RBI)", ref: "ack", hint: "15 July every year" },
+      { n: "SEBI LODR filing (listed entity)", ref: "ack", hint: "Quarterly or half-yearly, as the regulation requires" },
+      { n: "Corporate governance report", ref: "ack", hint: "Quarterly, within 21 days of quarter end" },
+      { n: "Shareholding pattern", ref: "ack", hint: "Quarterly, within 21 days of quarter end" }
+    ] },
+    { id: "event", label: "Event-Based", full: "Event-Based Compliances", types: [
+      { n: "DIR-12 (Director / KMP appointment, resignation, removal)", ref: "srn", hint: "Within 30 days of the event" },
+      { n: "PAS-3 (Return of allotment)", ref: "srn", hint: "Within 30 days of allotment" },
+      { n: "Rights issue / private placement", ref: "srn", hint: "Follows the offer timeline under the Act" },
+      { n: "SH-7 (Alteration of authorised capital)", ref: "srn", hint: "Within 30 days of the resolution" },
+      { n: "INC-22 (Shift of registered office)", ref: "srn", hint: "Within 30 days of the shift" },
+      { n: "Alteration of MOA / AOA", ref: "srn", hint: "Within 30 days of the resolution" },
+      { n: "Change of company name", ref: "srn", hint: "" },
+      { n: "CHG-1 (Creation or modification of charge)", ref: "srn", hint: "Within 30 days of creation" },
+      { n: "CHG-4 (Satisfaction of charge)", ref: "srn", hint: "Within 30 days of satisfaction" }
+    ] },
+    { id: "meetings", label: "Meetings & Records", full: "Meeting Management & Secretarial Records", types: [
+      { n: "Board meeting: notice, agenda, minutes", ref: null, hint: "Notice at least 7 days before the meeting" },
+      { n: "AGM: notice, agenda, minutes", ref: null, hint: "Notice at least 21 clear days before the meeting" },
+      { n: "EGM: notice, agenda, minutes", ref: null, hint: "Notice at least 21 clear days before the meeting" },
+      { n: "Statutory registers update", ref: null, hint: "" },
+      { n: "Ordinary / special resolution drafting", ref: null, hint: "" }
+    ] },
+    { id: "audit", label: "Audits & Certification", full: "Audits, Certifications & Due Diligence", types: [
+      { n: "Secretarial Audit Report (MR-3)", ref: "udin", hint: "" },
+      { n: "Pre-certification of e-form", ref: "udin", hint: "Before the form is filed" },
+      { n: "Due diligence / search report", ref: "udin", hint: "" },
+      { n: "UDIN generation for certificate", ref: "udin", hint: "" }
+    ] },
+    { id: "incorp", label: "Incorporation & Setup", full: "Incorporation & Setup Services", types: [
+      { n: "Private Limited incorporation (SPICe+)", ref: "srn", hint: "" },
+      { n: "LLP incorporation (FiLLiP)", ref: "srn", hint: "" },
+      { n: "OPC incorporation (SPICe+)", ref: "srn", hint: "" },
+      { n: "Section 8 company incorporation (SPICe+)", ref: "srn", hint: "" },
+      { n: "PAN / TAN registration", ref: "ack", hint: "" },
+      { n: "GST registration", ref: "ack", hint: "" },
+      { n: "MSME (Udyam) registration", ref: "ack", hint: "" },
+      { n: "Trademark registration", ref: "ack", hint: "" },
+      { n: "Fast-track exit / strike-off (STK-2)", ref: "srn", hint: "" },
+      { n: "Winding up of dormant entity", ref: "srn", hint: "" }
+    ] },
+    { id: "advisory", label: "Advisory & Representation", full: "Advisory & Representation", types: [
+      { n: "NCLT / RD / ROC petition and hearing", ref: null, hint: "" },
+      { n: "Compounding of offences", ref: null, hint: "" },
+      { n: "Adjudication / show-cause notice reply", ref: null, hint: "Reply by the date in the notice" },
+      { n: "FEMA / RBI advisory", ref: null, hint: "" },
+      { n: "CSR compliance advisory", ref: null, hint: "" },
+      { n: "Insider trading policy advisory", ref: null, hint: "" }
+    ] },
+    { id: "admin", label: "Firm Administration", full: "Internal Firm Administration", types: [
+      { n: "Client onboarding (KYC, engagement letter, compliance calendar)", ref: null, hint: "" },
+      { n: "Peer review preparation", ref: null, hint: "" },
+      { n: "Internal maker-checker audit", ref: null, hint: "" },
+      { n: "SOP update", ref: null, hint: "" },
+      { n: "Billing: hours and invoice", ref: null, hint: "" },
+      { n: "Professional fee follow-up", ref: null, hint: "" }
+    ] }
+  ];
+  var ST = {
+    todo: { l: "Not started", tone: "neutral" },
+    drafting: { l: "Drafting", tone: "info" },
+    review: { l: "With checker", tone: "warn" },
+    approved: { l: "Approved", tone: "accent" },
+    filed: { l: "Filed", tone: "ok" }
+  };
+  var REFS = {
+    srn: { key: "srn", label: "SRN" },
+    udin: { key: "udin", label: "UDIN" },
+    ack: { key: "ack", label: "challan or acknowledgement number" }
+  };
+  var STATES = [
+    { id: "open", label: "Open", tone: "" },
+    { id: "overdue", label: "Overdue", tone: "bad" },
+    { id: "soon", label: "Due in 7 days", tone: "warn" },
+    { id: "review", label: "With checker", tone: "" },
+    { id: "filed", label: "Filed", tone: "ok" }
+  ];
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    if (props) {
+      for (var k in props) {
+        var v = props[k];
+        if (v === null || v === undefined || v === false) continue;
+        if (k === "class") el.className = v;
+        else if (k === "text") el.textContent = v;
+        else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+        else el.setAttribute(k, v === true ? "" : v);
+      }
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var kid = arguments[i];
+      if (kid === null || kid === undefined || kid === false) continue;
+      if (Array.isArray(kid)) { kid.forEach(function (x) { if (x) el.append(x.nodeType ? x : document.createTextNode(String(x))); }); continue; }
+      el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function today() { return ymd(new Date()); }
+  function addDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+  function dayDiff(a, b) {
+    var pa = a.split("-").map(Number), pb = b.split("-").map(Number);
+    return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 864e5);
+  }
+  function fmt(s) {
+    if (!s) return "No date";
+    var p = s.split("-").map(Number);
+    return p[2] + " " + MON[p[1] - 1] + " " + p[0];
+  }
+  function fmtStamp(ms) {
+    var d = new Date(ms);
+    var hr = d.getHours(), ap = hr >= 12 ? "pm" : "am";
+    hr = hr % 12 || 12;
+    return d.getDate() + " " + MON[d.getMonth()] + ", " + hr + ":" + pad(d.getMinutes()) + " " + ap;
+  }
+  function norm(s) { return String(s || "").trim().toLowerCase(); }
+  function same(a, b) { return norm(a) !== "" && norm(a) === norm(b); }
+  function catOf(id) { for (var i = 0; i < CATS.length; i++) if (CATS[i].id === id) return CATS[i]; return null; }
+  function typeOf(catId, name) {
+    var c = catOf(catId); if (!c) return null;
+    for (var i = 0; i < c.types.length; i++) if (c.types[i].n === name) return c.types[i];
+    return null;
+  }
+  function refNeeded(t) { var ty = typeOf(t.cat, t.type); return ty && ty.ref ? REFS[ty.ref] : null; }
+  function isOpen(t) { return t.status !== "filed"; }
+  function dueInfo(t) {
+    if (t.status === "filed") return { tone: "ok", text: t.filedOn ? "Filed " + fmt(t.filedOn) : "Filed" };
+    if (!t.due) return { tone: "neutral", text: "No due date" };
+    var d = dayDiff(today(), t.due);
+    if (d < 0) return { tone: "bad", text: Math.abs(d) + (Math.abs(d) === 1 ? " day" : " days") + " overdue" };
+    if (d === 0) return { tone: "bad", text: "Due today" };
+    if (d <= 7) return { tone: "warn", text: d + (d === 1 ? " day left" : " days left") };
+    return { tone: "neutral", text: d + " days left" };
+  }
+  function isOverdue(t) { return isOpen(t) && t.due && t.due < today(); }
+  function isSoon(t) { return isOpen(t) && t.due && t.due >= today() && dayDiff(today(), t.due) <= 7; }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $("toast"); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, 4200);
+  }
+  function lsGet(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
+  function me() { return $("me").value.trim(); }
+
+  /* ---------- state ---------- */
+  var tasks = null, storageDown = false;
+  var view = { cat: "all", f: "open", who: "", q: "" };
+  var editing = null; // task object or null for a new task
+  var opener = null;
+
+  /* ---------- writes ---------- */
+  /* ---------- OneDrive storage ---------- */
+  var CFG = window.TRACKER_CONFIG || {};
+  var GRAPH = "https://graph.microsoft.com/v1.0";
+  var SCOPES = ["User.Read", "Files.ReadWrite"];
+  var FILE_PATH = "DSG Work Tracker/malappuram-work-tracker.json";
+  var msalApp = null, account = null, conn = null;
+  var lastEtag = "", chain = Promise.resolve(), pollTimer = null;
+  try { conn = JSON.parse(lsGet("dsg-tracker-conn") || "null"); } catch (e) { conn = null; }
+
+  function base() { return conn.kind === "own" ? "/me/drive/items/" + conn.itemId : "/shares/" + conn.shareId + "/driveItem"; }
+  function toShareId(url) {
+    var b = btoa(unescape(encodeURIComponent(url))).replace(/=+$/, "").replace(/\//g, "_").replace(/\+/g, "-");
+    return "u!" + b;
+  }
+  function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function getToken() {
+    var req = { scopes: SCOPES, account: account };
+    return msalApp.acquireTokenSilent(req).then(
+      function (r) { return r.accessToken; },
+      function () { msalApp.acquireTokenRedirect(req); return new Promise(function () {}); });
+  }
+  function gfetch(path, opts) {
+    return getToken().then(function (t) {
+      opts = opts || {};
+      opts.cache = "no-store";
+      opts.headers = Object.assign({ Authorization: "Bearer " + t }, opts.headers || {});
+      return fetch(path.indexOf("http") === 0 ? path : GRAPH + path, opts);
+    });
+  }
+  function httpErr(r) { var e = new Error("HTTP " + r.status); e.status = r.status; return e; }
+  function readRemote() {
+    var out = {};
+    return gfetch(base() + "?$select=id,eTag,@microsoft.graph.downloadUrl").then(function (r) {
+      if (!r.ok) throw httpErr(r);
+      return r.json();
+    }).then(function (meta) {
+      out.etag = meta.eTag;
+      var dl = meta["@microsoft.graph.downloadUrl"];
+      return gfetch(base() + "/content").catch(function (err) {
+        if (!dl) throw err;
+        return fetch(dl, { cache: "no-store" });
+      });
+    }).then(function (r) {
+      if (!r.ok) throw httpErr(r);
+      return r.text();
+    }).then(function (txt) {
+      var data; try { data = txt ? JSON.parse(txt) : {}; } catch (e) { data = {}; }
+      if (!data || !Array.isArray(data.tasks)) data = { version: 1, tasks: [] };
+      out.data = data;
+      return out;
+    });
+  }
+  function mutate(fn, attempt) {
+    attempt = attempt || 0;
+    return readRemote().then(function (cur) {
+      var next = fn(cur.data);
+      return gfetch(base() + "/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "If-Match": cur.etag },
+        body: JSON.stringify(next)
+      }).then(function (r) {
+        if (r.ok) return r.json().then(function (j) { lastEtag = j.eTag || ""; applyTasks(next.tasks); });
+        if ((r.status === 412 || r.status === 409) && attempt < 3) {
+          return new Promise(function (res) { setTimeout(res, 400 * (attempt + 1)); }).then(function () { return mutate(fn, attempt + 1); });
+        }
+        throw httpErr(r);
+      });
+    });
+  }
+  function queue(fn) { var p = chain.then(function () { return mutate(fn); }); chain = p.catch(function () {}); return p; }
+  var store = {
+    ready: function () { return !!(conn && account); },
+    add: function (list) {
+      return queue(function (d) { list.forEach(function (o) { o.id = newId(); d.tasks.push(o); }); return d; });
+    },
+    update: function (id, patch) {
+      return queue(function (d) {
+        var i = -1;
+        d.tasks.forEach(function (t, k) { if (t.id === id) i = k; });
+        if (i < 0) { var e = new Error("missing"); e.status = 404; throw e; }
+        d.tasks[i] = Object.assign({}, d.tasks[i], patch);
+        return d;
+      });
+    },
+    remove: function (ids) {
+      return queue(function (d) { d.tasks = d.tasks.filter(function (t) { return ids.indexOf(t.id) === -1; }); return d; });
+    }
+  };
+  function applyTasks(list) {
+    tasks = list;
+    if (editing) {
+      var fresh = list.filter(function (t) { return t.id === editing.id; })[0];
+      if (fresh) { editing = fresh; renderFlow(); renderLog(); }
+    }
+    render();
+  }
+  function poll() {
+    if (!store.ready() || document.hidden || tasks === null) return;
+    gfetch(base() + "?$select=eTag").then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+      if (m && m.eTag && m.eTag !== lastEtag) {
+        return readRemote().then(function (cur) { lastEtag = cur.etag; applyTasks(cur.data.tasks); });
+      }
+    }).catch(function () { /* try again on the next tick */ });
+  }
+  function writeFail(e) {
+    var s = e && e.status;
+    if (s === 403) toast("You only have view access to the tracker file. Ask the owner for an edit link.");
+    else if (s === 401) toast("Your sign-in expired. Reload the page and sign in again.");
+    else if (s === 404) toast("The tracker file could not be found. Reconnect it from the start screen.");
+    else if (s === 412 || s === 409) toast("Someone else saved at the same moment. Try again.");
+    else toast("Could not save to OneDrive. Check the connection and try again.");
+    return false;
+  }
+
+  /* ---------- connect screens ---------- */
+  function setConn(c) { conn = c; lsSet("dsg-tracker-conn", c ? JSON.stringify(c) : ""); }
+  function showApp(on) {
+    $("work").hidden = !on;
+    $("connect").hidden = on;
+    $("add").hidden = !on;
+    $("team").hidden = !(on && conn && conn.kind === "own");
+    $("signout").hidden = !account;
+    $("acct").textContent = account ? (account.name || account.username || "") : "";
+    if (!on) $("linkbox").hidden = true;
+  }
+  function renderConnect(stage, msg) {
+    showApp(false);
+    var box = $("connect"); box.replaceChildren();
+    var err = msg ? h("p", { class: "msg", role: "alert", text: msg }) : null;
+    if (stage === "setup") {
+      box.append(h("h2", { text: "One setup step is left" }),
+        h("p", null, "This page needs a Microsoft application ID before anyone can sign in. Open the file in a text editor, find the line that starts with ", h("code", { text: "window.TRACKER_CONFIG" }), ", and replace the placeholder text with the Application (client) ID from your Azure app registration. Then upload the file again."));
+    } else if (stage === "nolib") {
+      box.append(h("h2", { text: "Sign-in could not load" }), h("p", { text: "The Microsoft sign-in library did not load. Check the internet connection and reload the page." }));
+    } else if (stage === "signin") {
+      box.append(h("h2", { text: "Sign in to open the tracker" }),
+        h("p", { text: "Tasks are kept in a file in OneDrive. Sign in with the Microsoft account that owns the file, or with your own Microsoft account if the owner has shared the file with you." }),
+        err,
+        h("div", null, h("button", { type: "button", class: "btn primary", onclick: function () { msalApp.loginRedirect({ scopes: SCOPES }); } }, "Sign in with Microsoft")));
+    } else if (stage === "loading") {
+      box.append(h("h2", { text: "Opening the tracker" }), h("p", { text: "Reading the task file from OneDrive." }));
+    } else if (stage === "error") {
+      box.append(h("h2", { text: "The tracker did not open" }), err,
+        h("div", null, h("button", { type: "button", class: "btn primary", onclick: function () { renderConnect("loading"); loadAll(); } }, "Try again")));
+    } else {
+      var linkInput = h("input", { id: "c-link", type: "text", placeholder: "https://1drv.ms/...", autocomplete: "off", "aria-label": "Sharing link" });
+      box.append(h("h2", { text: "Connect the tracker file" }),
+        h("p", { text: "Choose one. The owner creates the file once. Every other staff member joins with the team link the owner shares." }),
+        err,
+        h("div", { class: "cards" },
+          h("div", { class: "card" },
+            h("h3", { text: "I am the owner" }),
+            h("p", { text: "Creates DSG Work Tracker / malappuram-work-tracker.json in your OneDrive. If the file already exists, it is opened instead." }),
+            h("button", { type: "button", class: "btn primary", onclick: createFile }, "Create or open my file")),
+          h("div", { class: "card" },
+            h("h3", { text: "I was given a team link" }),
+            h("p", { text: "Paste the link the owner shared with you." }),
+            linkInput,
+            h("button", { type: "button", class: "btn primary", onclick: joinShared }, "Connect"))));
+    }
+  }
+  function connectError(e) {
+    var s = e && e.status, m;
+    if (s === 401 || s === 403) m = "OneDrive refused access to the file. Ask the owner for an edit link, then connect again.";
+    else if (s === 404) m = "The tracker file was not found. Check the link, or create the file if you are the owner.";
+    else m = "Could not reach OneDrive. Check the connection and try again." + (e && e.message ? " (" + e.message + ")" : "");
+    if (s) { setConn(null); renderConnect("choose", m); }
+    else renderConnect("error", m);
+  }
+  function loadAll() {
+    return readRemote().then(function (cur) {
+      lastEtag = cur.etag;
+      tasks = cur.data.tasks;
+      showApp(true);
+      render();
+    }, connectError);
+  }
+  function createFile() {
+    var path = FILE_PATH.split("/").map(encodeURIComponent).join("/");
+    gfetch("/me/drive/root:/" + path + ":/content?@microsoft.graph.conflictBehavior=fail", {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: 1, tasks: [] })
+    }).then(function (r) {
+      if (r.ok) return r.json();
+      if (r.status === 409) {
+        return gfetch("/me/drive/root:/" + path).then(function (r2) { if (!r2.ok) throw httpErr(r2); return r2.json(); });
+      }
+      throw httpErr(r);
+    }).then(function (item) {
+      setConn({ kind: "own", itemId: item.id });
+      renderConnect("loading");
+      return loadAll();
+    }).catch(connectError);
+  }
+  function joinShared() {
+    var link = $("c-link").value.trim();
+    if (!/^https:\/\//i.test(link)) { renderConnect("choose", "Paste the full link that starts with https://"); return; }
+    setConn({ kind: "share", shareId: toShareId(link) });
+    renderConnect("loading");
+    loadAll();
+  }
+  function makeTeamLink() {
+    if (!conn || conn.kind !== "own") return;
+    gfetch("/me/drive/items/" + conn.itemId + "/createLink", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "edit", scope: "anonymous" })
+    }).then(function (r) { if (!r.ok) throw httpErr(r); return r.json(); }).then(function (j) {
+      var url = j && j.link && j.link.webUrl;
+      if (!url) throw new Error("No link returned");
+      $("linkval").value = url; $("linkbox").hidden = false;
+    }).catch(function () { toast("Could not create the link. Open the file in OneDrive and use its Share button instead."); });
+  }
+  function logWith(t, text) {
+    var list = (t && t.log ? t.log.slice() : []);
+    list.push({ at: Date.now(), by: me() || "Someone", text: text });
+    return list.slice(-60);
+  }
+
+  /* ---------- workflow ---------- */
+  function actionsFor(t) {
+    switch (t.status) {
+      case "todo": return { primary: { label: "Start drafting", to: "drafting" } };
+      case "drafting": return { primary: { label: "Send to checker", to: "review" } };
+      case "review": return { primary: { label: "Approve", to: "approved" }, secondary: { label: "Return", to: "drafting" } };
+      case "approved": return { primary: { label: "Mark filed", to: "filed" }, secondary: { label: "Back to checker", to: "review" } };
+      case "filed": return { secondary: { label: "Reopen", to: "approved" } };
+    }
+    return {};
+  }
+  function moveText(from, to) {
+    if (to === "drafting") return from === "review" ? "Returned to maker for changes" : "Started drafting";
+    if (to === "review") return from === "approved" ? "Sent back to checker" : "Sent to checker for review";
+    if (to === "approved") return from === "filed" ? "Filing reopened" : "Approved by " + (me() || "Someone");
+    if (to === "filed") return "Marked as filed";
+    return "Status changed";
+  }
+  function checkMove(t, to, m) {
+    if (to === "review") {
+      if (!norm(m.maker) || !norm(m.checker)) return { msg: "Assign both a maker and a checker before sending this to the checker.", focus: !norm(m.maker) ? "f-maker" : "f-checker" };
+      if (same(m.maker, m.checker)) return { msg: "The maker and the checker must be different people.", focus: "f-checker" };
+    }
+    if (to === "approved" && t.status === "review") {
+      if (!me()) return { msg: "Enter your name at the top of the page to approve. It is recorded in the activity log.", focus: "me", page: true };
+      if (same(me(), m.maker)) return { msg: "The maker cannot approve their own work. Ask the checker or a partner to approve.", page: true };
+    }
+    if (to === "filed") {
+      var r = refNeeded(m);
+      if (r && !String(m[r.key] || "").trim()) return { msg: "Enter the " + r.label + " to mark this as filed.", focus: "f-" + r.key };
+    }
+    return null;
+  }
+  function tryMove(t, to, extra, fromSheet) {
+    extra = extra || {};
+    if (!store.ready()) { toast("Connect to OneDrive first."); return Promise.resolve(false); }
+    var m = Object.assign({}, t, extra);
+    var bad = checkMove(t, to, m);
+    if (bad) {
+      if (fromSheet) { sheetMsg(bad.msg); if (bad.focus) focusId(bad.focus); }
+      else if (bad.page) { toast(bad.msg); if (bad.focus) focusId(bad.focus); }
+      else openSheet(t, { msg: bad.msg, focus: bad.focus });
+      return Promise.resolve(false);
+    }
+    var patch = Object.assign({}, extra, { status: to, updatedAt: Date.now(), log: logWith(t, moveText(t.status, to)) });
+    if (to === "filed") patch.filedOn = m.filedOn || today();
+    if (t.status === "filed" && to !== "filed") patch.filedOn = "";
+    return store.update(t.id, patch).then(function () {
+      toast(to === "filed" ? "Marked as filed" : ST[to].l);
+      return true;
+    }, writeFail);
+  }
+  function focusId(id) { var el = $(id); if (el) { el.focus(); if (el.select) try { el.select(); } catch (e) { /* ignore */ } } }
+
+  /* ---------- filtering ---------- */
+  function baseList() {
+    var q = norm(view.q), who = norm(view.who);
+    return (tasks || []).filter(function (t) {
+      if (view.cat !== "all" && t.cat !== view.cat) return false;
+      if (who && norm(t.maker) !== who && norm(t.checker) !== who) return false;
+      if (q) {
+        var hay = [t.client, t.type, t.srn, t.udin, t.ack, t.maker, t.checker, t.notes].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+  function applyState(list) {
+    switch (view.f) {
+      case "open": return list.filter(isOpen);
+      case "overdue": return list.filter(isOverdue);
+      case "soon": return list.filter(isSoon);
+      case "review": return list.filter(function (t) { return t.status === "review"; });
+      case "filed": return list.filter(function (t) { return t.status === "filed"; });
+    }
+    return list;
+  }
+  function sortList(list) {
+    return list.slice().sort(function (a, b) {
+      var ao = isOpen(a) ? 0 : 1, bo = isOpen(b) ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      if (!ao) return String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.client).localeCompare(String(b.client));
+      return String(b.filedOn || "").localeCompare(String(a.filedOn || ""));
+    });
+  }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    if (tasks === null) { $("list").replaceChildren(h("div", { class: "empty" }, h("p", { text: "Loading tasks" }))); return; }
+    renderLists();
+    renderStats();
+    renderTabs();
+    renderPeople();
+    renderListBody();
+  }
+  function renderLists() {
+    var banner = $("banner");
+    if (storageDown) {
+      banner.hidden = false;
+      banner.textContent = "Shared storage is not available in this view, so tasks cannot be saved. Open the page from claude.ai while signed in.";
+    } else banner.hidden = true;
+  }
+  function renderStats() {
+    var base = baseList();
+    var counts = {
+      open: base.filter(isOpen).length,
+      overdue: base.filter(isOverdue).length,
+      soon: base.filter(isSoon).length,
+      review: base.filter(function (t) { return t.status === "review"; }).length,
+      filed: base.filter(function (t) { return t.status === "filed"; }).length
+    };
+    var box = $("stats"); box.replaceChildren();
+    STATES.forEach(function (s) {
+      var n = counts[s.id];
+      var tone = s.tone && (s.id === "filed" || n > 0) ? s.tone : "";
+      box.append(h("button", {
+        type: "button", class: "tile " + tone, "aria-pressed": view.f === s.id ? "true" : "false",
+        onclick: function () { view.f = s.id; render(); }
+      }, h("span", { class: "n", text: String(n) }), h("span", { class: "l", text: s.label })));
+    });
+  }
+  function renderTabs() {
+    var openCount = function (id) {
+      return (tasks || []).filter(function (t) { return isOpen(t) && (id === "all" || t.cat === id); }).length;
+    };
+    var box = $("tabs"); box.replaceChildren();
+    var all = [{ id: "all", label: "All categories" }].concat(CATS);
+    all.forEach(function (c) {
+      box.append(h("button", {
+        type: "button", role: "tab", class: "tab", "aria-selected": view.cat === c.id ? "true" : "false",
+        title: c.full || c.label,
+        onclick: function () { view.cat = c.id; render(); }
+      }, h("span", { text: c.label }), h("span", { class: "c", text: String(openCount(c.id)) })));
+    });
+  }
+  function renderPeople() {
+    var names = {}, clients = {};
+    (tasks || []).forEach(function (t) {
+      [t.maker, t.checker].forEach(function (n) { if (norm(n)) names[String(n).trim()] = 1; });
+      if (norm(t.client)) clients[String(t.client).trim()] = 1;
+    });
+    var list = Object.keys(names).sort(function (a, b) { return a.localeCompare(b); });
+    var sel = $("who"); sel.replaceChildren(h("option", { value: "", text: "Everyone" }));
+    list.forEach(function (n) { sel.append(h("option", { value: n, text: n })); });
+    if (view.who && list.indexOf(view.who) === -1) view.who = "";
+    sel.value = view.who;
+    $("dl-people").replaceChildren.apply($("dl-people"), list.map(function (n) { return h("option", { value: n }); }));
+    $("dl-clients").replaceChildren.apply($("dl-clients"), Object.keys(clients).sort().map(function (n) { return h("option", { value: n }); }));
+  }
+  function emptyBlock() {
+    var total = (tasks || []).length;
+    if (total === 0) {
+      return h("div", { class: "empty" },
+        h("strong", { text: "No tasks yet" }),
+        h("p", { text: "Add the first task for a Malappuram client, or load a few sample tasks to see how the maker and checker steps work. Sample tasks are marked and can be removed in one click." }),
+        h("div", { class: "acts" },
+          h("button", { type: "button", class: "btn primary", onclick: function () { openSheet(null); } }, "Add first task"),
+          h("button", { type: "button", class: "btn", onclick: addSamples }, "Load sample tasks")));
+    }
+    return h("div", { class: "empty" },
+      h("strong", { text: "Nothing matches these filters" }),
+      h("p", { text: "Try another category, status or search term." }),
+      h("div", { class: "acts" }, h("button", { type: "button", class: "btn", onclick: clearFilters }, "Clear filters")));
+  }
+  function clearFilters() { view = { cat: "all", f: "open", who: "", q: "" }; $("q").value = ""; render(); }
+  function renderListBody() {
+    var box = $("list"); box.replaceChildren();
+    var rows = sortList(applyState(baseList()));
+    if (!rows.length) { box.append(emptyBlock()); }
+    else {
+      box.append(h("div", { class: "head", "aria-hidden": "true" }, h("span", { text: "Due" }), h("span", { text: "Client and task" }), h("span", { text: "Maker and checker" }), h("span", { text: "Status" })));
+      rows.forEach(function (t) { box.append(rowEl(t)); });
+    }
+    var hasSample = (tasks || []).some(function (t) { return t.sample; });
+    var foot = $("foot"); foot.replaceChildren(
+      h("span", { text: rows.length + (rows.length === 1 ? " task shown" : " tasks shown") + " of " + (tasks || []).length }),
+      hasSample ? h("button", { type: "button", class: "btn link", onclick: removeSamples }, "Remove sample tasks") : null);
+  }
+  function rowEl(t) {
+    var cat = catOf(t.cat), di = dueInfo(t), act = actionsFor(t);
+    var refs = [];
+    if (t.srn) refs.push("SRN " + t.srn);
+    if (t.udin) refs.push("UDIN " + t.udin);
+    if (t.ack) refs.push("Ack " + t.ack);
+    var acts = h("div", { class: "acts" });
+    if (act.primary) acts.append(h("button", { type: "button", class: "btn small primary", onclick: function (e) { e.stopPropagation(); tryMove(t, act.primary.to); } }, act.primary.label));
+    if (act.secondary) acts.append(h("button", { type: "button", class: "btn small", onclick: function (e) { e.stopPropagation(); tryMove(t, act.secondary.to); } }, act.secondary.label));
+    acts.append(h("button", { type: "button", class: "btn small link", onclick: function () { openSheet(t); } }, "Open"));
+    return h("article", { class: "row" },
+      h("div", { class: "due" },
+        h("span", { class: "d", text: t.status === "filed" ? fmt(t.due) : fmt(t.due) }),
+        h("span", { class: "r " + di.tone, text: di.text })),
+      h("div", { class: "main" },
+        h("div", { class: "client" }, t.client || "Untitled client", t.sample ? h("span", { class: "pill sample", text: "Sample" }) : null),
+        h("div", { class: "type", text: (t.type || "") + (cat ? "  ·  " + cat.label : "") }),
+        refs.length ? h("div", { class: "refs" }, refs.map(function (r) { return h("span", { text: r }); })) : null,
+        t.notes ? h("div", { class: "note", text: t.notes.length > 110 ? t.notes.slice(0, 107) + "..." : t.notes }) : null),
+      h("div", { class: "people" },
+        h("div", null, h("span", { class: "k", text: "Maker" }), t.maker ? h("span", { class: "v", text: t.maker }) : h("span", { class: "v none", text: "Unassigned" })),
+        h("div", null, h("span", { class: "k", text: "Checker" }), t.checker ? h("span", { class: "v", text: t.checker }) : h("span", { class: "v none", text: "Unassigned" }))),
+      h("div", { class: "state" }, h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), acts));
+  }
+
+  /* ---------- side sheet ---------- */
+  function fillTypes(catId, keep) {
+    var sel = $("f-type"); sel.replaceChildren();
+    var c = catOf(catId) || CATS[0];
+    c.types.forEach(function (ty) { sel.append(h("option", { value: ty.n, text: ty.n })); });
+    if (keep && typeOf(catId, keep)) sel.value = keep;
+    updateTypeUi();
+  }
+  function updateTypeUi() {
+    var ty = typeOf($("f-cat").value, $("f-type").value);
+    $("f-hint").textContent = ty && ty.hint ? "Usual due date: " + ty.hint + ". Guide only. Confirm against the current MCA or SEBI notification." : "";
+    ["srn", "udin", "ack"].forEach(function (k) {
+      var lab = $("lab-" + k);
+      var base = k === "srn" ? "SRN" : k === "udin" ? "UDIN" : "Challan / acknowledgement no.";
+      lab.replaceChildren(document.createTextNode(base));
+      if (ty && ty.ref === k) lab.append(h("span", { class: "req", text: "  required to mark filed" }));
+    });
+  }
+  function sheetMsg(msg) { var el = $("sheet-msg"); el.textContent = msg || ""; el.hidden = !msg; }
+  function openSheet(t, opts) {
+    opts = opts || {};
+    editing = t;
+    opener = document.activeElement;
+    sheetMsg(opts.msg || "");
+    var cat = t ? t.cat : (view.cat !== "all" ? view.cat : CATS[0].id);
+    var catSel = $("f-cat");
+    catSel.replaceChildren();
+    CATS.forEach(function (c) { catSel.append(h("option", { value: c.id, text: c.full })); });
+    catSel.value = cat;
+    fillTypes(cat, t ? t.type : "");
+    $("f-client").value = t ? (t.client || "") : "";
+    $("f-due").value = t ? (t.due || "") : "";
+    $("f-maker").value = t ? (t.maker || "") : me();
+    $("f-checker").value = t ? (t.checker || "") : "";
+    $("f-srn").value = t ? (t.srn || "") : "";
+    $("f-udin").value = t ? (t.udin || "") : "";
+    $("f-ack").value = t ? (t.ack || "") : "";
+    $("f-filed").value = t ? (t.filedOn || "") : "";
+    $("f-notes").value = t ? (t.notes || "") : "";
+    $("sheet-title").textContent = t ? (t.client || "Task") : "New task";
+    var st = $("sheet-status"); st.replaceChildren();
+    if (t) st.append(h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), t.sample ? h("span", { class: "pill sample", text: "Sample" }) : null);
+    renderFlow();
+    renderLog();
+    $("f-delete").hidden = !t;
+    $("log-box").hidden = !t;
+    $("f-save").textContent = t ? "Save changes" : "Add task";
+    resetDelete();
+    $("overlay").hidden = false;
+    setTimeout(function () { focusId(opts.focus || (t ? "f-notes" : "f-client")); if (!opts.focus && t) $("sheet").querySelector(".sheet-body").scrollTop = 0; }, 30);
+  }
+  function renderFlow() {
+    var box = $("sheet-flow"); box.replaceChildren();
+    if (!editing) return;
+    var act = actionsFor(editing);
+    [act.primary, act.secondary].forEach(function (a, i) {
+      if (!a) return;
+      box.append(h("button", { type: "button", class: "btn small" + (i === 0 ? " primary" : ""), onclick: function () { sheetMove(a.to); } }, a.label));
+    });
+  }
+  function renderLog() {
+    var box = $("f-log"); box.replaceChildren();
+    var list = editing && editing.log ? editing.log.slice().reverse() : [];
+    if (!list.length) { box.append(h("li", null, h("span"), h("span", { text: "No activity recorded yet." }))); return; }
+    list.forEach(function (e) {
+      box.append(h("li", null, h("time", { text: fmtStamp(e.at) }), h("span", null, h("span", { class: "by", text: e.by + ": " }), e.text)));
+    });
+  }
+  function closeSheet() {
+    $("overlay").hidden = true; editing = null;
+    if (opener && opener.focus) try { opener.focus(); } catch (e) { /* ignore */ }
+  }
+  function readForm() {
+    return {
+      client: $("f-client").value.trim(),
+      cat: $("f-cat").value,
+      type: $("f-type").value,
+      due: $("f-due").value,
+      maker: $("f-maker").value.trim(),
+      checker: $("f-checker").value.trim(),
+      srn: $("f-srn").value.trim(),
+      udin: $("f-udin").value.trim(),
+      ack: $("f-ack").value.trim(),
+      filedOn: $("f-filed").value,
+      notes: $("f-notes").value.trim()
+    };
+  }
+  var FIELD_NAMES = { client: "client", cat: "category", type: "task", due: "due date", maker: "maker", checker: "checker", srn: "SRN", udin: "UDIN", ack: "acknowledgement no.", filedOn: "filed date", notes: "notes" };
+  function validateForm(f) {
+    if (!f.client) return { msg: "Enter the client name.", focus: "f-client" };
+    if (!f.type) return { msg: "Choose the task.", focus: "f-type" };
+    if (!f.due) return { msg: "Enter the due date. Every task here has a deadline to track.", focus: "f-due" };
+    if (f.maker && same(f.maker, f.checker)) return { msg: "The maker and the checker must be different people.", focus: "f-checker" };
+    return null;
+  }
+  function sheetMove(to) {
+    var f = readForm(), bad = validateForm(f);
+    if (bad) { sheetMsg(bad.msg); focusId(bad.focus); return; }
+    sheetMsg("");
+    tryMove(editing, to, f, true).then(function (ok) { if (ok) closeSheet(); });
+  }
+  function saveForm(e) {
+    e.preventDefault();
+    if (!store.ready()) { toast("Connect to OneDrive first."); return; }
+    var f = readForm(), bad = validateForm(f);
+    if (bad) { sheetMsg(bad.msg); focusId(bad.focus); return; }
+    sheetMsg("");
+    var now = Date.now(), p;
+    if (!editing) {
+      
+      var obj = Object.assign({}, f, { status: "todo", createdAt: now, updatedAt: now, log: [{ at: now, by: me() || "Someone", text: "Task created" }] });
+      p = store.add([obj]);
+    } else {
+      var changed = Object.keys(FIELD_NAMES).filter(function (k) { return (editing[k] || "") !== f[k] && k !== "notes"; });
+      var notesChanged = (editing.notes || "") !== f.notes;
+      var patch = Object.assign({}, f, { updatedAt: now });
+      var labels = changed.map(function (k) { return FIELD_NAMES[k]; });
+      if (notesChanged) labels.push("notes");
+      if (labels.length) patch.log = logWith(editing, "Edited " + labels.join(", "));
+      p = store.update(editing.id, patch);
+    }
+    p.then(function () { toast(editing ? "Changes saved" : "Task added"); closeSheet(); }, writeFail);
+  }
+  var delTimer = null;
+  function resetDelete() { var b = $("f-delete"); clearTimeout(delTimer); b.classList.remove("armed"); b.textContent = "Delete task"; }
+  function deleteClick() {
+    var b = $("f-delete");
+    if (!b.classList.contains("armed")) {
+      b.classList.add("armed"); b.textContent = "Click again to delete";
+      delTimer = setTimeout(resetDelete, 4000); return;
+    }
+    resetDelete();
+    if (!editing || !store.ready()) return;
+    store.remove([editing.id]).then(function () { toast("Task deleted"); closeSheet(); }, writeFail);
+  }
+
+  /* ---------- sample tasks ---------- */
+  function addSamples() {
+    if (!store.ready()) { toast("Connect to OneDrive first."); return; }
+    var S = [
+      { client: "Sample: Alpha Traders Pvt Ltd", cat: "annual", type: "DIR-3 KYC (Director KYC)", off: -2, maker: "Trainee A", checker: "CS B", status: "drafting" },
+      { client: "Sample: Beta Foods LLP", cat: "annual", type: "MSME-1 (Half-yearly return)", off: 5, maker: "Trainee A", checker: "CS B", status: "review" },
+      { client: "Sample: Gamma Infra Pvt Ltd", cat: "event", type: "PAS-3 (Return of allotment)", off: 12, maker: "Trainee C", checker: "CS B", status: "todo" },
+      { client: "Sample: Delta Tech Pvt Ltd", cat: "audit", type: "Secretarial Audit Report (MR-3)", off: 25, maker: "CS B", checker: "Partner D", status: "drafting" },
+      { client: "Sample: Epsilon Ventures LLP", cat: "meetings", type: "AGM: notice, agenda, minutes", off: 3, maker: "Trainee C", checker: "CS B", status: "approved" },
+      { client: "Sample: Zeta Retail Pvt Ltd", cat: "annual", type: "AOC-4 (Financial Statements)", off: -10, maker: "Trainee A", checker: "CS B", status: "filed", srn: "SAMPLE0001", filedOn: addDays(-12) }
+    ];
+    var now = Date.now();
+    var jobs = S.map(function (s, i) {
+      var o = { client: s.client, cat: s.cat, type: s.type, due: addDays(s.off), maker: s.maker, checker: s.checker, srn: s.srn || "", udin: "", ack: "", filedOn: s.filedOn || "", notes: "", status: s.status, sample: true, createdAt: now + i, updatedAt: now + i,
+        log: [{ at: now + i, by: "Sample data", text: "Task created" }] };
+      return o;
+    });
+    store.add(jobs).then(function () { toast("Sample tasks added"); }, writeFail);
+  }
+  function removeSamples() {
+    if (!store.ready()) return;
+    var ids = (tasks || []).filter(function (t) { return t.sample; }).map(function (t) { return t.id; });
+    store.remove(ids).then(function () { toast("Sample tasks removed"); }, writeFail);
+  }
+
+  /* ---------- wiring ---------- */
+  $("me").value = lsGet("dsg-tracker-me");
+  $("me").addEventListener("change", function () { lsSet("dsg-tracker-me", me()); });
+  $("add").addEventListener("click", function () { openSheet(null); });
+  $("q").addEventListener("input", function (e) { view.q = e.target.value; if (tasks) { renderStats(); renderTabs(); renderListBody(); } });
+  $("who").addEventListener("change", function (e) { view.who = e.target.value; render(); });
+  $("f-cat").addEventListener("change", function () { fillTypes($("f-cat").value, ""); });
+  $("f-type").addEventListener("change", updateTypeUi);
+  $("sheet").addEventListener("submit", saveForm);
+  $("f-cancel").addEventListener("click", closeSheet);
+  $("sheet-close").addEventListener("click", closeSheet);
+  $("f-delete").addEventListener("click", deleteClick);
+  $("overlay").addEventListener("mousedown", function (e) { if (e.target === $("overlay")) closeSheet(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("overlay").hidden) closeSheet(); });
+
+  $("team").addEventListener("click", makeTeamLink);
+  $("linkclose").addEventListener("click", function () { $("linkbox").hidden = true; });
+  $("linkcopy").addEventListener("click", function () {
+    var el = $("linkval");
+    el.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(el.value).then(function () { toast("Link copied"); }, function () { toast("Press Ctrl+C to copy the selected link"); });
+    else toast("Press Ctrl+C to copy the selected link");
+  });
+  $("signout").addEventListener("click", function () { if (msalApp && account) msalApp.logoutRedirect({ account: account }); });
+
+  function afterSignIn() {
+    if (!me()) $("me").value = account.name || "";
+    if (conn) { renderConnect("loading"); loadAll(); } else renderConnect("choose");
+    clearInterval(pollTimer);
+    pollTimer = setInterval(poll, 20000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) poll(); });
+  }
+  function boot() {
+    if (!CFG.clientId || /PASTE/.test(CFG.clientId)) { renderConnect("setup"); return; }
+    if (!window.msal || !window.msal.PublicClientApplication) { renderConnect("nolib"); return; }
+    msalApp = new window.msal.PublicClientApplication({
+      auth: {
+        clientId: CFG.clientId,
+        authority: CFG.authority || "https://login.microsoftonline.com/consumers",
+        redirectUri: CFG.redirectUri || (location.origin + location.pathname)
+      },
+      cache: { cacheLocation: "localStorage" }
+    });
+    msalApp.initialize().then(function () { return msalApp.handleRedirectPromise(); }).then(function (res) {
+      account = (res && res.account) || msalApp.getAllAccounts()[0] || null;
+      if (!account) { renderConnect("signin"); return; }
+      msalApp.setActiveAccount(account);
+      afterSignIn();
+    }).catch(function (e) { renderConnect("signin", "Sign-in failed: " + (e && e.message ? e.message : "unknown error")); });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
