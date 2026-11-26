@@ -595,7 +595,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
   function renderConnect(stage, msg) {
     showApp(false);
     var box = $("connect"); box.replaceChildren();
-    var err = msg ? h("p", { class: "msg", role: "alert", text: msg }) : null;
+    var err = msg ? h("p", { class: "msg", role: "alert", text: msg }) : document.createComment("");
     if (stage === "setup") {
       box.append(h("h2", { text: "One setup step is left" }),
         h("p", null, "This page needs a Microsoft application ID before anyone can sign in. Open the file in a text editor, find the line that starts with ", h("code", { text: "window.TRACKER_CONFIG" }), ", and replace the placeholder text with the Application (client) ID from your Azure app registration. Then upload the file again."));
@@ -859,7 +859,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     var hasSample = (tasks || []).some(function (t) { return t.sample; });
     var foot = $("foot"); foot.replaceChildren(
       h("span", { text: rows.length + (rows.length === 1 ? " task shown" : " tasks shown") + " of " + (tasks || []).length }),
-      hasSample ? h("button", { type: "button", class: "btn link", onclick: removeSamples }, "Remove sample tasks") : null);
+      hasSample ? h("button", { type: "button", class: "btn link", onclick: removeSamples }, "Remove sample tasks") : document.createComment(""));
   }
   function rowEl(t) {
     var cat = catOf(t.cat), di = dueInfo(t), act = actionsFor(t);
@@ -927,7 +927,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     $("f-notes").value = t ? (t.notes || "") : "";
     $("sheet-title").textContent = t ? (t.client || "Task") : "New task";
     var st = $("sheet-status"); st.replaceChildren();
-    if (t) st.append(h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), t.sample ? h("span", { class: "pill sample", text: "Sample" }) : null);
+    if (t) st.append(h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), t.sample ? h("span", { class: "pill sample", text: "Sample" }) : document.createComment(""));
     renderFlow();
     renderLog();
     $("f-delete").hidden = !t;
