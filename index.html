@@ -104,7 +104,8 @@ input::placeholder, textarea::placeholder { color: var(--ink-2); opacity: .75; }
 .list { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .head, .row { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 11rem 9.5rem; gap: 6px 18px; padding: 12px 16px; }
 .head { background: var(--surface-2); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--ink-2); padding-block: 8px; }
-.row { border-top: 1px solid var(--line); align-items: start; }
+.row { border-top: 1px solid var(--line); align-items: start; grid-template-areas: "due main people status"; }
+.list .row:first-child { border-top: 0; }
 .head + .row { border-top: 0; }
 .due { grid-area: due; display: flex; flex-direction: column; gap: 2px; }
 .due .d { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -191,6 +192,39 @@ body { min-height: 100vh; }
 .linkrow { display: flex; gap: 8px; flex-wrap: wrap; }
 .linkrow input { flex: 1; min-width: 12rem; font-family: var(--font-mono); font-size: 12.5px; }
 code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.views { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.vbtn { border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; color: var(--ink-2); }
+.vbtn:hover { background: var(--surface-2); }
+.vbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.vbtn .c { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--ink); border-radius: 999px; padding: 0 7px; }
+.vbtn[aria-pressed="true"] .c { background: var(--accent-ink); color: var(--accent); }
+.due .d { white-space: nowrap; }
+.hello h2 { margin: 0; font-size: 22px; }
+.hello p { margin: 2px 0 0; color: var(--ink-2); }
+.tile.static { cursor: default; }
+.tile.static:hover { border-color: var(--line); }
+.tile.accent .n { color: var(--accent); }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.sec h2 { margin: 0; font-size: 15px; letter-spacing: .01em; }
+.muted { margin: 0; color: var(--ink-2); }
+.card2 { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.card2 h2 { margin: 0; font-size: 17px; }
+.card2 p { margin: 0; color: var(--ink-2); max-width: 64ch; }
+.people .v.is-me { font-weight: 700; color: var(--accent); }
+.tbl { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+.tbl table { border-collapse: collapse; width: 100%; min-width: 34rem; }
+.tbl th, .tbl td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.tbl th { border-top: 0; background: var(--surface-2); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+.tbl td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tbl td.bad { color: var(--bad); font-weight: 700; }
+.tbl .acts { flex-wrap: nowrap; }
+.mform { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 10px; align-items: end; }
+.mform h3 { grid-column: 1 / -1; margin: 0; font-size: 15px; }
+.mform .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.mform .hint, .hintp { grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.hintp { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
 </style>
 </head>
 <body>
@@ -202,8 +236,6 @@ code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surfa
       <h1>Malappuram Work Tracker</h1>
     </div>
     <div class="who">
-      <label for="me">Working as</label>
-      <input id="me" type="text" placeholder="Your name" autocomplete="off" list="dl-people">
       <button class="btn primary" id="add" type="button" hidden>Add task</button>
       <span class="acct" id="acct"></span>
       <button class="btn small" id="team" type="button" hidden>Team link</button>
@@ -218,6 +250,10 @@ code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surfa
   <section class="connect" id="connect"><p>Starting</p></section>
   <div id="work" hidden>
   <div class="banner" id="banner" hidden></div>
+  <nav class="views" id="views" aria-label="Views"></nav>
+  <div id="v-me" class="stack" hidden></div>
+  <div id="v-team" class="stack" hidden></div>
+  <div id="v-all" class="stack">
   <section class="stats" id="stats" aria-label="Summary"></section>
   <div class="tabs" id="tabs" role="tablist" aria-label="Work category"></div>
   <div class="filters">
@@ -226,6 +262,7 @@ code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surfa
   </div>
   <section class="list" id="list" aria-live="polite"></section>
   <div class="foot" id="foot"></div>
+  </div>
   </div>
 </div>
 
@@ -257,8 +294,8 @@ code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surfa
       <fieldset>
         <legend>Maker and checker</legend>
         <div class="grid2">
-          <div class="fld"><label for="f-maker">Maker (drafts and files)</label><input id="f-maker" type="text" list="dl-people" autocomplete="off" placeholder="Name"></div>
-          <div class="fld"><label for="f-checker">Checker (reviews and signs off)</label><input id="f-checker" type="text" list="dl-people" autocomplete="off" placeholder="Name"></div>
+          <div class="fld"><label for="f-maker">Maker (drafts and files)</label><select id="f-maker"></select></div>
+          <div class="fld"><label for="f-checker">Checker (reviews and signs off)</label><select id="f-checker"></select></div>
         </div>
       </fieldset>
       <fieldset>
@@ -458,7 +495,21 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
   }
   function lsGet(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
-  function me() { return $("me").value.trim(); }
+  /* who is using the page, matched to the team list by sign-in email */
+  var team = [], meMember = null, screen = "me";
+  function resolveMe() {
+    meMember = null;
+    if (!account) return;
+    var em = String(account.username || "").toLowerCase();
+    team.forEach(function (m) { if (em && String(m.email || "").toLowerCase() === em) meMember = m; });
+    if (!meMember) team.forEach(function (m) { if (norm(m.name) && norm(m.name) === norm(account.name)) meMember = m; });
+  }
+  function me() { return meMember ? meMember.name : (account ? (account.name || account.username || "") : ""); }
+  function myRole() { return meMember ? meMember.role : ""; }
+  function isPartner() { return myRole() === "Partner"; }
+  function updateAcct() {
+    $("acct").textContent = account ? (meMember ? meMember.name + " (" + meMember.role + ")" : (account.name || account.username || "")) : "";
+  }
 
   /* ---------- state ---------- */
   var tasks = null, storageDown = false;
@@ -515,6 +566,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     }).then(function (txt) {
       var data; try { data = txt ? JSON.parse(txt) : {}; } catch (e) { data = {}; }
       if (!data || !Array.isArray(data.tasks)) data = { version: 1, tasks: [] };
+      if (!Array.isArray(data.team)) data.team = [];
       out.data = data;
       return out;
     });
@@ -528,7 +580,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
         headers: { "Content-Type": "application/json", "If-Match": cur.etag },
         body: JSON.stringify(next)
       }).then(function (r) {
-        if (r.ok) return r.json().then(function (j) { lastEtag = j.eTag || ""; applyTasks(next.tasks); });
+        if (r.ok) return r.json().then(function (j) { lastEtag = j.eTag || ""; applyData(next); });
         if ((r.status === 412 || r.status === 409) && attempt < 3) {
           return new Promise(function (res) { setTimeout(res, 400 * (attempt + 1)); }).then(function () { return mutate(fn, attempt + 1); });
         }
@@ -553,12 +605,44 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     },
     remove: function (ids) {
       return queue(function (d) { d.tasks = d.tasks.filter(function (t) { return ids.indexOf(t.id) === -1; }); return d; });
+    },
+    bootstrapMe: function () {
+      return queue(function (d) {
+        d.team = d.team || [];
+        if (d.team.length === 0) d.team.push({ id: newId(), name: String(account.name || account.username || "Partner"), email: String(account.username || "").toLowerCase(), role: "Partner" });
+        return d;
+      });
+    },
+    addMember: function (m) {
+      return queue(function (d) { d.team = d.team || []; m.id = newId(); d.team.push(m); return d; });
+    },
+    updateMember: function (id, patch) {
+      return queue(function (d) {
+        d.team = d.team || [];
+        var cur = d.team.filter(function (m) { return m.id === id; })[0];
+        if (!cur) { var e = new Error("missing"); e.status = 404; throw e; }
+        var old = cur.name;
+        Object.assign(cur, patch);
+        if (norm(old) !== norm(cur.name)) {
+          d.tasks.forEach(function (t) {
+            if (same(t.maker, old)) t.maker = cur.name;
+            if (same(t.checker, old)) t.checker = cur.name;
+          });
+        }
+        return d;
+      });
+    },
+    removeMember: function (id) {
+      return queue(function (d) { d.team = (d.team || []).filter(function (m) { return m.id !== id; }); return d; });
     }
   };
-  function applyTasks(list) {
-    tasks = list;
+  function applyData(d) {
+    tasks = d.tasks;
+    team = d.team || [];
+    resolveMe();
+    updateAcct();
     if (editing) {
-      var fresh = list.filter(function (t) { return t.id === editing.id; })[0];
+      var fresh = tasks.filter(function (t) { return t.id === editing.id; })[0];
       if (fresh) { editing = fresh; renderFlow(); renderLog(); }
     }
     render();
@@ -567,7 +651,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     if (!store.ready() || document.hidden || tasks === null) return;
     gfetch(base() + "?$select=eTag").then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
       if (m && m.eTag && m.eTag !== lastEtag) {
-        return readRemote().then(function (cur) { lastEtag = cur.etag; applyTasks(cur.data.tasks); });
+        return readRemote().then(function (cur) { lastEtag = cur.etag; applyData(cur.data); });
       }
     }).catch(function () { /* try again on the next tick */ });
   }
@@ -589,7 +673,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     $("add").hidden = !on;
     $("team").hidden = !(on && conn && conn.kind === "own");
     $("signout").hidden = !account;
-    $("acct").textContent = account ? (account.name || account.username || "") : "";
+    updateAcct();
     if (!on) $("linkbox").hidden = true;
   }
   function renderConnect(stage, msg) {
@@ -640,6 +724,8 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     return readRemote().then(function (cur) {
       lastEtag = cur.etag;
       tasks = cur.data.tasks;
+      team = cur.data.team || [];
+      resolveMe();
       showApp(true);
       render();
     }, connectError);
@@ -709,6 +795,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     if (to === "approved" && t.status === "review") {
       if (!me()) return { msg: "Enter your name at the top of the page to approve. It is recorded in the activity log.", focus: "me", page: true };
       if (same(me(), m.maker)) return { msg: "The maker cannot approve their own work. Ask the checker or a partner to approve.", page: true };
+      if (team.length && !same(me(), m.checker) && !isPartner()) return { msg: "Only the assigned checker or a partner can approve this task.", page: true };
     }
     if (to === "filed") {
       var r = refNeeded(m);
@@ -773,10 +860,13 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
   function render() {
     if (tasks === null) { $("list").replaceChildren(h("div", { class: "empty" }, h("p", { text: "Loading tasks" }))); return; }
     renderLists();
-    renderStats();
-    renderTabs();
-    renderPeople();
-    renderListBody();
+    renderNav();
+    $("v-me").hidden = screen !== "me";
+    $("v-team").hidden = screen !== "team";
+    $("v-all").hidden = screen !== "all";
+    if (screen === "me") renderMe();
+    else if (screen === "team") renderTeam();
+    else { renderStats(); renderTabs(); renderPeople(); renderListBody(); }
   }
   function renderLists() {
     var banner = $("banner");
@@ -824,6 +914,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
       [t.maker, t.checker].forEach(function (n) { if (norm(n)) names[String(n).trim()] = 1; });
       if (norm(t.client)) clients[String(t.client).trim()] = 1;
     });
+    team.forEach(function (m) { if (norm(m.name)) names[String(m.name).trim()] = 1; });
     var list = Object.keys(names).sort(function (a, b) { return a.localeCompare(b); });
     var sel = $("who"); sel.replaceChildren(h("option", { value: "", text: "Everyone" }));
     list.forEach(function (n) { sel.append(h("option", { value: n, text: n })); });
@@ -881,9 +972,142 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
         refs.length ? h("div", { class: "refs" }, refs.map(function (r) { return h("span", { text: r }); })) : null,
         t.notes ? h("div", { class: "note", text: t.notes.length > 110 ? t.notes.slice(0, 107) + "..." : t.notes }) : null),
       h("div", { class: "people" },
-        h("div", null, h("span", { class: "k", text: "Maker" }), t.maker ? h("span", { class: "v", text: t.maker }) : h("span", { class: "v none", text: "Unassigned" })),
-        h("div", null, h("span", { class: "k", text: "Checker" }), t.checker ? h("span", { class: "v", text: t.checker }) : h("span", { class: "v none", text: "Unassigned" }))),
+        h("div", null, h("span", { class: "k", text: "Maker" }), t.maker ? h("span", { class: "v" + (same(t.maker, me()) ? " is-me" : ""), text: t.maker }) : h("span", { class: "v none", text: "Unassigned" })),
+        h("div", null, h("span", { class: "k", text: "Checker" }), t.checker ? h("span", { class: "v" + (same(t.checker, me()) ? " is-me" : ""), text: t.checker }) : h("span", { class: "v none", text: "Unassigned" }))),
       h("div", { class: "state" }, h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), acts));
+  }
+
+  /* ---------- navigation, dashboards and team ---------- */
+  function needsMyAction(t) {
+    if (!isOpen(t)) return false;
+    var asMaker = same(t.maker, me()), asChecker = same(t.checker, me());
+    if (asMaker && (t.status === "todo" || t.status === "drafting" || t.status === "approved")) return true;
+    if (asChecker && t.status === "review") return true;
+    return false;
+  }
+  function byDue(a, b) { return String(a.due || "9999").localeCompare(String(b.due || "9999")); }
+  function renderNav() {
+    var box = $("views"); box.replaceChildren();
+    var n = meMember ? (tasks || []).filter(needsMyAction).length : 0;
+    [["me", "My dashboard"], ["all", "All work"], ["team", "Team"]].forEach(function (v) {
+      box.append(h("button", {
+        type: "button", class: "vbtn", "aria-pressed": screen === v[0] ? "true" : "false",
+        onclick: function () { screen = v[0]; lsSet("dsg-tracker-screen", screen); render(); }
+      }, h("span", { text: v[1] }), v[0] === "me" && n ? h("span", { class: "c", text: String(n) }) : null));
+    });
+  }
+  function bootstrapCard() {
+    return h("div", { class: "card2" },
+      h("h2", { text: "Set up your team" }),
+      h("p", { text: "No one is in the team list yet. Add yourself as the first partner. After that, open the Team tab to add your staff with the Microsoft email each person signs in with." }),
+      h("button", { type: "button", class: "btn primary", onclick: function () {
+        store.bootstrapMe().then(function () { toast("You are now the first partner"); screen = "team"; render(); }, writeFail);
+      } }, "Add me as the first partner"));
+  }
+  function statTile(n, label, tone) {
+    return h("div", { class: "tile static " + (n > 0 ? tone : "") }, h("span", { class: "n", text: String(n) }), h("span", { class: "l", text: label }));
+  }
+  function secEl(title, list, emptyText) {
+    var body = list.length ? h("div", { class: "list" }, list.map(rowEl)) : h("p", { class: "muted", text: emptyText });
+    return h("section", { class: "sec" }, h("h2", { text: title + " (" + list.length + ")" }), body);
+  }
+  function renderMe() {
+    var box = $("v-me"); box.replaceChildren();
+    if (!team.length) { box.append(bootstrapCard()); return; }
+    if (!meMember) {
+      box.append(h("div", { class: "card2" },
+        h("h2", { text: "Your account is not in the team list" }),
+        h("p", { text: "You are signed in as " + (account && account.username ? account.username : "an unknown account") + ". Ask a partner to add this email under the Team tab. Once added, the work assigned to you appears here." })));
+      return;
+    }
+    var mine = (tasks || []).filter(function (t) { return same(t.maker, me()) || same(t.checker, me()); });
+    var open = mine.filter(isOpen);
+    var action = open.filter(needsMyAction).sort(byDue);
+    var others = open.filter(function (t) { return !needsMyAction(t); }).sort(byDue);
+    var filed = mine.filter(function (t) { return t.status === "filed"; }).sort(function (a, b) { return String(b.filedOn || "").localeCompare(String(a.filedOn || "")); }).slice(0, 8);
+    var toReview = action.filter(function (t) { return same(t.checker, me()) && t.status === "review"; }).length;
+    var d = new Date();
+    box.append(
+      h("div", { class: "hello" },
+        h("h2", { text: "Hello, " + me().split(" ")[0] }),
+        h("p", { text: meMember.role + "  ·  " + d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear() })),
+      h("section", { class: "stats", "aria-label": "My summary" },
+        statTile(action.length, "Needs my action", "accent"),
+        statTile(toReview, "Waiting for my review", "warn"),
+        statTile(open.filter(isOverdue).length, "Overdue", "bad"),
+        statTile(open.filter(isSoon).length, "Due in 7 days", "warn"),
+        statTile(mine.filter(function (t) { return t.status === "filed"; }).length, "Filed", "ok")),
+      secEl("Needs my action", action, "Nothing is waiting for you. New work assigned to you will appear here."),
+      secEl("With others", others, "Nothing else is open for you."),
+      secEl("Recently filed", filed, "No filed work yet."));
+  }
+
+  var memberEditId = null;
+  function emailOk(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  function renderTeam() {
+    var box = $("v-team"); box.replaceChildren();
+    if (!team.length) { box.append(bootstrapCard()); return; }
+    var canManage = isPartner();
+    var rows = team.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (m) {
+      var open = (tasks || []).filter(function (t) { return isOpen(t) && (same(t.maker, m.name) || same(t.checker, m.name)); });
+      var od = open.filter(isOverdue).length;
+      var acts = h("div", { class: "acts" });
+      if (canManage) {
+        acts.append(h("button", { type: "button", class: "btn small", onclick: function () { memberEditId = m.id; renderTeam(); } }, "Edit"));
+        var rm = h("button", { type: "button", class: "btn small danger" }, "Remove");
+        var armed = false;
+        rm.addEventListener("click", function () {
+          if (!armed) { armed = true; rm.classList.add("armed"); rm.textContent = "Click again"; setTimeout(function () { armed = false; rm.classList.remove("armed"); rm.textContent = "Remove"; }, 4000); return; }
+          if (meMember && m.id === meMember.id) { toast("You cannot remove yourself."); return; }
+          store.removeMember(m.id).then(function () { toast("Removed " + m.name); }, writeFail);
+        });
+        acts.append(rm);
+      }
+      return h("tr", null,
+        h("td", null, h("strong", { text: m.name }), meMember && m.id === meMember.id ? h("span", { class: "pill sample", text: "You" }) : null),
+        h("td", { text: m.role }),
+        h("td", { text: m.email || "No email" }),
+        h("td", { class: "num", text: String(open.length) }),
+        h("td", { class: "num" + (od ? " bad" : ""), text: String(od) }),
+        h("td", null, acts));
+    });
+    box.append(
+      h("section", { class: "sec" },
+        h("h2", { text: "Team (" + team.length + ")" }),
+        h("div", { class: "tbl" }, h("table", null,
+          h("thead", null, h("tr", null, ["Name", "Role", "Sign-in email", "Open tasks", "Overdue", ""].map(function (x) { return h("th", { text: x }); }))),
+          h("tbody", null, rows)))));
+    if (!canManage) { box.append(h("p", { class: "hintp", text: "Only partners can add or change team members." })); return; }
+    var cur = memberEditId ? team.filter(function (m) { return m.id === memberEditId; })[0] : null;
+    var nameIn = h("input", { id: "m-name", type: "text", autocomplete: "off", placeholder: "Full name" });
+    var mailIn = h("input", { id: "m-email", type: "email", autocomplete: "off", placeholder: "name@outlook.com" });
+    var roleSel = h("select", { id: "m-role" }, ["Partner", "Company Secretary", "Trainee"].map(function (r) { return h("option", { value: r, text: r }); }));
+    if (cur) { nameIn.value = cur.name; mailIn.value = cur.email || ""; roleSel.value = cur.role; }
+    var msg = h("p", { class: "msg", role: "alert", hidden: true });
+    var form = h("form", { class: "mform", novalidate: true },
+      h("h3", { text: cur ? "Edit " + cur.name : "Add a team member" }),
+      h("div", { class: "fld" }, h("label", { for: "m-name", text: "Name" }), nameIn),
+      h("div", { class: "fld" }, h("label", { for: "m-email", text: "Microsoft sign-in email" }), mailIn),
+      h("div", { class: "fld" }, h("label", { for: "m-role", text: "Role" }), roleSel),
+      h("div", { class: "btns" },
+        h("button", { type: "submit", class: "btn primary" }, cur ? "Save member" : "Add member"),
+        cur ? h("button", { type: "button", class: "btn", onclick: function () { memberEditId = null; renderTeam(); } }, "Cancel") : null),
+      h("p", { class: "hint", text: "Each person signs in with their own Microsoft account. Enter the email they use for it, so their dashboard shows the work assigned to them." }),
+      msg);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var m = { name: nameIn.value.trim().replace(/\s+/g, " "), email: mailIn.value.trim().toLowerCase(), role: roleSel.value };
+      var bad = "";
+      if (!m.name) bad = "Enter the person's name.";
+      else if (!emailOk(m.email)) bad = "Enter a valid email address.";
+      else if (team.some(function (x) { return x.id !== memberEditId && norm(x.name) === norm(m.name); })) bad = "Someone with this name is already in the team. Add a middle initial to tell them apart.";
+      else if (team.some(function (x) { return x.id !== memberEditId && String(x.email).toLowerCase() === m.email; })) bad = "This email is already in the team.";
+      else if (cur && meMember && cur.id === meMember.id && m.role !== "Partner" && team.filter(function (x) { return x.role === "Partner"; }).length < 2) bad = "You are the only partner. Make someone else a partner before changing your own role.";
+      if (bad) { msg.textContent = bad; msg.hidden = false; return; }
+      var p = cur ? store.updateMember(cur.id, m) : store.addMember(m);
+      p.then(function () { toast(cur ? "Member saved" : m.name + " added"); memberEditId = null; render(); }, writeFail);
+    });
+    box.append(form);
   }
 
   /* ---------- side sheet ---------- */
@@ -904,6 +1128,16 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
       if (ty && ty.ref === k) lab.append(h("span", { class: "req", text: "  required to mark filed" }));
     });
   }
+  function fillPeople(sel, cur) {
+    sel.replaceChildren(h("option", { value: "", text: "Unassigned" }));
+    var seen = {};
+    team.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (m) {
+      sel.append(h("option", { value: m.name, text: m.name + " (" + m.role + ")" }));
+      seen[norm(m.name)] = 1;
+    });
+    if (cur && !seen[norm(cur)]) sel.append(h("option", { value: cur, text: cur + " (not in team)" }));
+    sel.value = cur || "";
+  }
   function sheetMsg(msg) { var el = $("sheet-msg"); el.textContent = msg || ""; el.hidden = !msg; }
   function openSheet(t, opts) {
     opts = opts || {};
@@ -918,8 +1152,8 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     fillTypes(cat, t ? t.type : "");
     $("f-client").value = t ? (t.client || "") : "";
     $("f-due").value = t ? (t.due || "") : "";
-    $("f-maker").value = t ? (t.maker || "") : me();
-    $("f-checker").value = t ? (t.checker || "") : "";
+    fillPeople($("f-maker"), t ? (t.maker || "") : (meMember ? me() : ""));
+    fillPeople($("f-checker"), t ? (t.checker || "") : "");
     $("f-srn").value = t ? (t.srn || "") : "";
     $("f-udin").value = t ? (t.udin || "") : "";
     $("f-ack").value = t ? (t.ack || "") : "";
@@ -930,7 +1164,7 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
     if (t) st.append(h("span", { class: "pill " + ST[t.status].tone, text: ST[t.status].l }), t.sample ? h("span", { class: "pill sample", text: "Sample" }) : document.createComment(""));
     renderFlow();
     renderLog();
-    $("f-delete").hidden = !t;
+    $("f-delete").hidden = !t || !!(team.length && !isPartner());
     $("log-box").hidden = !t;
     $("f-save").textContent = t ? "Save changes" : "Add task";
     resetDelete();
@@ -1048,8 +1282,8 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
   }
 
   /* ---------- wiring ---------- */
-  $("me").value = lsGet("dsg-tracker-me");
-  $("me").addEventListener("change", function () { lsSet("dsg-tracker-me", me()); });
+  screen = lsGet("dsg-tracker-screen") || "me";
+  if (["me", "all", "team"].indexOf(screen) === -1) screen = "me";
   $("add").addEventListener("click", function () { openSheet(null); });
   $("q").addEventListener("input", function (e) { view.q = e.target.value; if (tasks) { renderStats(); renderTabs(); renderListBody(); } });
   $("who").addEventListener("change", function (e) { view.who = e.target.value; render(); });
@@ -1073,7 +1307,6 @@ window.TRACKER_CONFIG = { clientId: "cb68c079-283d-463b-966d-334cb97c8af0" };
   $("signout").addEventListener("click", function () { if (msalApp && account) msalApp.logoutRedirect({ account: account }); });
 
   function afterSignIn() {
-    if (!me()) $("me").value = account.name || "";
     if (conn) { renderConnect("loading"); loadAll(); } else renderConnect("choose");
     clearInterval(pollTimer);
     pollTimer = setInterval(poll, 20000);
